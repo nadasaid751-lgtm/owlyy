@@ -2,7 +2,7 @@
    OWLY v2.0 — script.js
 ═══════════════════════════════════════════════ */
 
-const API = 'http://localhost:3000/api';
+const API = 'https://owlyy-production.up.railway.app/api';
 
 let currentSessionId = null;
 let chatSessions     = [];
