@@ -8,10 +8,9 @@
 //   5. Rate limiting on login/register
 //   6. Input validation & trimming
 // ═══════════════════════════════════════════════
-console.log("ENV CHECK:", process.env.GROQ_API_KEY);
-
 require('dotenv').config();
 
+console.log("ENV CHECK:", process.env.GROQ_API_KEY);
 
 const express    = require('express');
 const multer     = require('multer');
