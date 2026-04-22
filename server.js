@@ -22,6 +22,8 @@ const bcrypt     = require('bcrypt');
 const jwt        = require('jsonwebtoken');
 const Database   = require('better-sqlite3');
 const { Resend } = require('resend');
+console.log("RESEND KEY:", process.env.RESEND_API_KEY);
+
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 const app  = express();
