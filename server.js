@@ -214,7 +214,8 @@ app.post('/api/auth/register', rateLimit(10, 15 * 60 * 1000), async (req, res) =
     });
 
     // Send verification email
-    const verifyUrl = `http://localhost:${PORT}/api/auth/verify?token=${verifyToken}`;
+  const BASE_URL = process.env.APP_URL || `http://localhost:${PORT}`;
+const verifyUrl = `${BASE_URL}/api/auth/verify?token=${verifyToken}`;
     await transporter.sendMail({
       from: `"Owly 🦉" <${process.env.MAIL_USER}>`,
       to: email,
