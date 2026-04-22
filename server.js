@@ -8,6 +8,7 @@
 //   5. Rate limiting on login/register
 //   6. Input validation & trimming
 // ═══════════════════════════════════════════════
+console.log("ENV CHECK:", process.env.GROQ_API_KEY);
 
 require('dotenv').config();
 
@@ -26,15 +27,17 @@ const app  = express();
 const PORT = process.env.PORT || 3000;
 
 // ══ FIX #1: Secrets loaded from .env ══
+
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const JWT_SECRET   = process.env.JWT_SECRET;
 
-if (!GROQ_API_KEY || GROQ_API_KEY === 'YOUR_GROQ_API_KEY') {
-  console.error('❌ GROQ_API_KEY missing in .env file!');
+if (!GROQ_API_KEY) {
+  console.error('❌ GROQ_API_KEY missing in environment variables!');
   process.exit(1);
 }
+
 if (!JWT_SECRET) {
-  console.error('❌ JWT_SECRET missing in .env file!');
+  console.error('❌ JWT_SECRET missing in environment variables!');
   process.exit(1);
 }
 
