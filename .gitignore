@@ -1,0 +1,4 @@
+node_modules/
+.env
+owly.db
+uploads/
