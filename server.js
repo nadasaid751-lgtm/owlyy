@@ -12,6 +12,7 @@ console.log("ENV CHECK:", process.env.GROQ_API_KEY);
 
 require('dotenv').config();
 
+
 const express    = require('express');
 const multer     = require('multer');
 const cors       = require('cors');
@@ -21,7 +22,8 @@ const pdfParse   = require('pdf-parse');
 const bcrypt     = require('bcrypt');
 const jwt        = require('jsonwebtoken');
 const Database   = require('better-sqlite3');
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -41,16 +43,7 @@ if (!JWT_SECRET) {
   process.exit(1);
 }
 
-// ══ Email Transporter ══
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 465,
-  secure: true,
-  auth: {
-    user: process.env.MAIL_USER,
-    pass: process.env.MAIL_PASS
-  }
-});
+
 
 // In-memory store for verification tokens { token: { email, name, password, expires } }
 const pendingVerifications = new Map();
@@ -221,21 +214,21 @@ app.post('/api/auth/register', rateLimit(10, 15 * 60 * 1000), async (req, res) =
     // Send verification email
   const BASE_URL = process.env.APP_URL || `http://localhost:${PORT}`;
 const verifyUrl = `${BASE_URL}/api/auth/verify?token=${verifyToken}`;
-    await transporter.sendMail({
-      from: `"Owly 🦉" <${process.env.MAIL_USER}>`,
-      to: email,
-      subject: '✅ Confirm your Owly account',
-      html: `
-        <div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;padding:32px;background:#f9f9f9;border-radius:12px;">
-          <h2 style="color:#6c47ff;">🦉 Welcome to Owly, ${name}!</h2>
-          <p>Click the button below to verify your email and activate your account.</p>
-          <a href="${verifyUrl}" style="display:inline-block;margin:16px 0;padding:12px 28px;background:#6c47ff;color:#fff;border-radius:8px;text-decoration:none;font-weight:bold;">
-            ✅ Verify My Email
-          </a>
-          <p style="color:#999;font-size:12px;">This link expires in 1 hour. If you didn't create an account, ignore this email.</p>
-        </div>
-      `
-    });
+  await resend.emails.send({
+  from: 'Owly <onboarding@resend.dev>',
+  to: email,
+  subject: '✅ Confirm your Owly account',
+  html: `
+    <div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;padding:32px;background:#f9f9f9;border-radius:12px;">
+      <h2 style="color:#6c47ff;">🦉 Welcome to Owly, ${name}!</h2>
+      <p>Click the button below to verify your email and activate your account.</p>
+      <a href="${verifyUrl}" style="display:inline-block;margin:16px 0;padding:12px 28px;background:#6c47ff;color:#fff;border-radius:8px;text-decoration:none;font-weight:bold;">
+        ✅ Verify My Email
+      </a>
+      <p style="color:#999;font-size:12px;">This link expires in 1 hour. If you didn't create an account, ignore this email.</p>
+    </div>
+  `
+});
 
     res.json({ message: 'Verification email sent! Please check your inbox.' });
   } catch(e) {
