@@ -110,9 +110,9 @@ function setLevel(level){
 async function doSignIn(){
   const email    = document.getElementById('siEmail').value.trim();
   const password = document.getElementById('siPassword')?.value || '';
-  const emailRegex = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9\-]+(\.[a-zA-Z0-9\-]+)+$/;
+  const emailRegex = /^[a-zA-Z0-9._%+\-]+@gmail\.com$/;
   if (!email){ shake(); showToast('⚠️ Please enter your email'); return; }
-  if (!emailRegex.test(email) || !/\.[a-zA-Z]{2,}$/.test(email)){ shake(); showToast('⚠️ Invalid email! e.g. name@gmail.com'); return; }
+  if (!emailRegex.test(email)){ shake(); showToast('⚠️ Invalid email! e.g. name@gmail.com'); return; }
   if (!password){ shake(); showToast('⚠️ Please enter your password'); return; }
 
   const btn = document.getElementById('signInBtn');
@@ -145,12 +145,10 @@ async function doRegister(){
   const name     = document.getElementById('regName').value.trim();
   const email    = document.getElementById('regEmail').value.trim();
   const password = document.getElementById('regPassword')?.value || '';
-  const emailRegex = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9\-]+(\.[a-zA-Z0-9\-]+)+$/;
+  const emailRegex = /^[a-zA-Z0-9._%+\-]+@gmail\.com$/;
   const knownFakeDomains = ['test.com','example.com','fake.com','mailinator.com','guerrillamail.com','tempmail.com','throwaway.com','yopmail.com','sharklasers.com','trashmail.com'];
   if (!name||!email||!password){ shake(); showToast('⚠️ Please fill in all fields'); return; }
-  if (!emailRegex.test(email) || !/\.[a-zA-Z]{2,}$/.test(email)){ shake(); showToast('⚠️ Invalid email! e.g. name@gmail.com'); return; }
-  const emailDomain = email.split('@')[1]?.toLowerCase();
-  if (knownFakeDomains.includes(emailDomain)){ shake(); showToast('⚠️ Please use a real email address'); return; }
+  if (!emailRegex.test(email)){ shake(); showToast('⚠️ Invalid email! e.g. name@gmail.com'); return; }
   if (password.length < 6){ shake(); showToast('⚠️ Password must be at least 6 characters'); return; }
 
   const btn = document.getElementById('signUpBtn');
@@ -163,9 +161,13 @@ async function doRegister(){
     });
     const data = await res.json();
     if (!res.ok){ shake(); showToast('❌ ' + (data.error||'Registration failed')); btn.innerHTML='<i class="fas fa-user-check"></i> Sign Up'; btn.disabled=false; return; }
+    authToken = data.token;
+    currentUser = data.user;
+    localStorage.setItem('owlyToken', authToken);
+    localStorage.setItem('owlyUserObj', JSON.stringify(currentUser));
     btn.innerHTML='<i class="fas fa-user-check"></i> Sign Up'; btn.disabled=false;
-    showToast('📧 Verification email sent! Check your inbox.');
-    setTimeout(()=>show('screenSignIn'),2500);
+    showToast('✅ Welcome, ' + data.user.name.split(' ')[0] + '!');
+    setTimeout(()=>{ closeForm(); enterApp(); }, 600);
   } catch(e){
     shake(); showToast('❌ Server not running!');
     btn.innerHTML='<i class="fas fa-user-check"></i> Sign Up'; btn.disabled=false;
