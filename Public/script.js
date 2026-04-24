@@ -112,7 +112,7 @@ async function doSignIn(){
   const password = document.getElementById('siPassword')?.value || '';
   const emailRegex = /^[a-zA-Z0-9._%+\-]+@gmail\.com$/;
   if (!email){ shake(); showToast('⚠️ Please enter your email'); return; }
-  if (!emailRegex.test(email)){ shake(); showToast('⚠️ Invalid email! e.g. name@gmail.com'); return; }
+  if (!emailRegex.test(email)){ shake(); showToast('⚠️ Only Gmail addresses are allowed (@gmail.com)'); return; }
   if (!password){ shake(); showToast('⚠️ Please enter your password'); return; }
 
   const btn = document.getElementById('signInBtn');
@@ -146,9 +146,8 @@ async function doRegister(){
   const email    = document.getElementById('regEmail').value.trim();
   const password = document.getElementById('regPassword')?.value || '';
   const emailRegex = /^[a-zA-Z0-9._%+\-]+@gmail\.com$/;
-  const knownFakeDomains = ['test.com','example.com','fake.com','mailinator.com','guerrillamail.com','tempmail.com','throwaway.com','yopmail.com','sharklasers.com','trashmail.com'];
   if (!name||!email||!password){ shake(); showToast('⚠️ Please fill in all fields'); return; }
-  if (!emailRegex.test(email)){ shake(); showToast('⚠️ Invalid email! e.g. name@gmail.com'); return; }
+  if (!emailRegex.test(email)){ shake(); showToast('⚠️ Only Gmail addresses are allowed (@gmail.com)'); return; }
   if (password.length < 6){ shake(); showToast('⚠️ Password must be at least 6 characters'); return; }
 
   const btn = document.getElementById('signUpBtn');
@@ -206,7 +205,6 @@ window.addEventListener('DOMContentLoaded', async () => {
       const res = await fetch(`${API}/auth/me`, { headers: getAuthHeaders() });
       if (res.ok) {
         const data = await res.json();
-        // تحقق إن اليوزر موجود فعلاً في الداتابيز
         if (data && data.user && data.user.id) {
           currentUser = data.user;
           enterApp();
