@@ -12,15 +12,20 @@ const pdfParse   = require('pdf-parse');
 const bcrypt     = require('bcrypt');
 const jwt        = require('jsonwebtoken');
 const Database   = require('better-sqlite3');
+const nodemailer = require('nodemailer');   // ✅ NEW
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
-const GROQ_API_KEY = process.env.GROQ_API_KEY;
-const JWT_SECRET   = process.env.JWT_SECRET;
+const GROQ_API_KEY  = process.env.GROQ_API_KEY;
+const JWT_SECRET    = process.env.JWT_SECRET;
+const GMAIL_USER    = process.env.GMAIL_USER;    // ✅ NEW  e.g. yourapp@gmail.com
+const GMAIL_PASS    = process.env.GMAIL_PASS;    // ✅ NEW  App Password (16 chars)
 
 if (!GROQ_API_KEY) { console.error('❌ GROQ_API_KEY missing!'); process.exit(1); }
 if (!JWT_SECRET)   { console.error('❌ JWT_SECRET missing!');   process.exit(1); }
+if (!GMAIL_USER)   { console.error('❌ GMAIL_USER missing!');   process.exit(1); }
+if (!GMAIL_PASS)   { console.error('❌ GMAIL_PASS missing!');   process.exit(1); }
 
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const MODEL    = 'llama-3.1-8b-instant';
@@ -28,6 +33,32 @@ const MODEL    = 'llama-3.1-8b-instant';
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'Public')));
+
+// ── Gmail SMTP Transporter ──────────────────────
+// ✅ NEW BLOCK — Gmail SMTP setup
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: { user: GMAIL_USER, pass: GMAIL_PASS }
+});
+
+async function sendVerificationEmail(toEmail, code) {
+  const mailOptions = {
+    from: `"Owly 🦉" <${GMAIL_USER}>`,
+    to: toEmail,
+    subject: 'Your Owly Verification Code',
+    html: `
+      <div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;padding:32px;background:#f9f9f9;border-radius:12px;">
+        <h2 style="color:#5b4fcf;margin-bottom:8px;">🦉 Welcome to Owly!</h2>
+        <p style="color:#444;">Use the code below to verify your email address:</p>
+        <div style="font-size:36px;font-weight:bold;letter-spacing:8px;color:#5b4fcf;text-align:center;padding:24px 0;">${code}</div>
+        <p style="color:#888;font-size:13px;">This code expires in <strong>10 minutes</strong>. Do not share it with anyone.</p>
+        <hr style="border:none;border-top:1px solid #ddd;margin:24px 0;">
+        <p style="color:#aaa;font-size:12px;text-align:center;">If you didn't request this, just ignore this email.</p>
+      </div>`
+  };
+  await transporter.sendMail(mailOptions);
+}
+// ── End Gmail block ─────────────────────────────
 
 // ── SQLite ──────────────────────────────────────
 const DB_PATH = process.env.RENDER_DISK_PATH
@@ -66,6 +97,14 @@ db.exec(`
     quizzes    INTEGER DEFAULT 0,
     best_score TEXT    DEFAULT NULL,
     FOREIGN KEY (user_id) REFERENCES users(id)
+  );
+  CREATE TABLE IF NOT EXISTS pending_verifications (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    name       TEXT    NOT NULL,
+    email      TEXT    UNIQUE NOT NULL,
+    password   TEXT    NOT NULL,
+    code       TEXT    NOT NULL,
+    expires_at INTEGER NOT NULL
   );
 `);
 console.log('✅ Database ready');
@@ -115,7 +154,8 @@ async function validateApiKey() {
 // 👤 Auth Endpoints
 // ═══════════════════════════════════════════════
 
-// Register — بدون email verification
+// ── STEP 1: Register — send verification code ──
+// ✅ CHANGED: now sends real email instead of auto-verifying
 app.post('/api/auth/register', rateLimit(10, 15 * 60 * 1000), async (req, res) => {
   const name     = (req.body.name     || '').trim();
   const email    = (req.body.email    || '').trim().toLowerCase();
@@ -129,23 +169,102 @@ app.post('/api/auth/register', rateLimit(10, 15 * 60 * 1000), async (req, res) =
     return res.status(400).json({ error: 'Invalid email format' });
 
   try {
-    const exists = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
-    if (exists) return res.status(400).json({ error: 'Email already registered' });
+    // Check if already a verified user
+    const exists = db.prepare('SELECT id, verified FROM users WHERE email = ?').get(email);
+    if (exists && exists.verified) return res.status(400).json({ error: 'Email already registered' });
 
     const hashed = await bcrypt.hash(password, 10);
-    const result = db.prepare('INSERT INTO users (name, email, password, verified) VALUES (?, ?, ?, 1)')
-      .run(name, email, hashed);
-    db.prepare('INSERT INTO stats (user_id) VALUES (?)').run(result.lastInsertRowid);
 
-    const token = jwt.sign({ id: result.lastInsertRowid, name, email }, JWT_SECRET, { expiresIn: '7d' });
-    res.json({ token, user: { id: result.lastInsertRowid, name, email } });
+    // Generate 6-digit code
+    const code      = String(Math.floor(100000 + Math.random() * 900000));
+    const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+    // Save pending (upsert)
+    db.prepare(`
+      INSERT INTO pending_verifications (name, email, password, code, expires_at)
+      VALUES (?, ?, ?, ?, ?)
+      ON CONFLICT(email) DO UPDATE SET name=excluded.name, password=excluded.password, code=excluded.code, expires_at=excluded.expires_at
+    `).run(name, email, hashed, code, expiresAt);
+
+    // Send email
+    await sendVerificationEmail(email, code);
+    console.log(`✅ Verification code sent to ${email}`);
+
+    res.json({ ok: true, message: 'Verification code sent to your email.' });
   } catch(e) {
-    console.error(e);
-    res.status(500).json({ error: 'Registration failed' });
+    console.error('Register error:', e);
+    res.status(500).json({ error: 'Failed to send verification email. Check Gmail config.' });
   }
 });
 
-// Login
+// ── STEP 2: Verify code ────────────────────────
+// ✅ NEW ENDPOINT
+app.post('/api/auth/verify', rateLimit(10, 15 * 60 * 1000), async (req, res) => {
+  const email = (req.body.email || '').trim().toLowerCase();
+  const code  = (req.body.code  || '').trim();
+
+  if (!email || !code) return res.status(400).json({ error: 'Email and code required' });
+
+  const pending = db.prepare('SELECT * FROM pending_verifications WHERE email = ?').get(email);
+
+  if (!pending)           return res.status(400).json({ error: 'No pending registration for this email' });
+  if (Date.now() > pending.expires_at) {
+    db.prepare('DELETE FROM pending_verifications WHERE email = ?').run(email);
+    return res.status(400).json({ error: 'Code expired. Please register again.' });
+  }
+  if (pending.code !== code) return res.status(400).json({ error: 'Incorrect code. Try again.' });
+
+  try {
+    // Check again in case someone registered via another path
+    const exists = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
+    let userId;
+
+    if (exists) {
+      // Update existing unverified user
+      db.prepare('UPDATE users SET name=?, password=?, verified=1 WHERE email=?')
+        .run(pending.name, pending.password, email);
+      userId = exists.id;
+    } else {
+      const result = db.prepare('INSERT INTO users (name, email, password, verified) VALUES (?, ?, ?, 1)')
+        .run(pending.name, email, pending.password);
+      userId = result.lastInsertRowid;
+      db.prepare('INSERT OR IGNORE INTO stats (user_id) VALUES (?)').run(userId);
+    }
+
+    // Clean up pending
+    db.prepare('DELETE FROM pending_verifications WHERE email = ?').run(email);
+
+    const token = jwt.sign({ id: userId, name: pending.name, email }, JWT_SECRET, { expiresIn: '7d' });
+    res.json({ token, user: { id: userId, name: pending.name, email } });
+  } catch(e) {
+    console.error('Verify error:', e);
+    res.status(500).json({ error: 'Verification failed' });
+  }
+});
+
+// ── Resend code ────────────────────────────────
+// ✅ NEW ENDPOINT
+app.post('/api/auth/resend', rateLimit(5, 15 * 60 * 1000), async (req, res) => {
+  const email = (req.body.email || '').trim().toLowerCase();
+  if (!email) return res.status(400).json({ error: 'Email required' });
+
+  const pending = db.prepare('SELECT * FROM pending_verifications WHERE email = ?').get(email);
+  if (!pending) return res.status(400).json({ error: 'No pending registration for this email' });
+
+  const code      = String(Math.floor(100000 + Math.random() * 900000));
+  const expiresAt = Date.now() + 10 * 60 * 1000;
+
+  db.prepare('UPDATE pending_verifications SET code=?, expires_at=? WHERE email=?').run(code, expiresAt, email);
+
+  try {
+    await sendVerificationEmail(email, code);
+    res.json({ ok: true, message: 'New code sent.' });
+  } catch(e) {
+    res.status(500).json({ error: 'Failed to resend email.' });
+  }
+});
+
+// Login — unchanged
 app.post('/api/auth/login', rateLimit(10, 15 * 60 * 1000), async (req, res) => {
   const email    = (req.body.email    || '').trim().toLowerCase();
   const password =  req.body.password || '';
@@ -153,6 +272,7 @@ app.post('/api/auth/login', rateLimit(10, 15 * 60 * 1000), async (req, res) => {
   try {
     const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
     if (!user) return res.status(401).json({ error: 'Email not found' });
+    if (!user.verified) return res.status(401).json({ error: 'Please verify your email first' });
     const match = await bcrypt.compare(password, user.password);
     if (!match) return res.status(401).json({ error: 'Wrong password' });
     const token = jwt.sign({ id: user.id, name: user.name, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
@@ -160,7 +280,7 @@ app.post('/api/auth/login', rateLimit(10, 15 * 60 * 1000), async (req, res) => {
   } catch(e) { console.error(e); res.status(500).json({ error: 'Login failed' }); }
 });
 
-// Me
+// Me — unchanged
 app.get('/api/auth/me', authMiddleware, (req, res) => {
   const user  = db.prepare('SELECT id, name, email, created_at FROM users WHERE id = ?').get(req.user.id);
   const stats = db.prepare('SELECT * FROM stats WHERE user_id = ?').get(req.user.id);
