@@ -3,6 +3,9 @@
 // ═══════════════════════════════════════════════
 require('dotenv').config();
 
+console.log("KEY:", process.env.BREVO_API_KEY);
+console.log("LENGTH:", process.env.BREVO_API_KEY?.length);
+
 const express    = require('express');
 const multer     = require('multer');
 const cors       = require('cors');
