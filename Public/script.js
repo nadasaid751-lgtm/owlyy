@@ -10,7 +10,7 @@ let activeChatId     = null;
 let activeMessages   = [];
 let explainLevel     = 'normal';
 let authToken        = localStorage.getItem('owlyToken') || null;
-let currentUser      = JSON.parse(localStorage.getItem('owlyUserObj') || 'null');
+let currentUser      = (()=>{ try { const v=localStorage.getItem('owlyUserObj'); return (v&&v!=='undefined')?JSON.parse(v):null; } catch(e){ return null; } })();
 let currentQuizDifficulty = 'medium';
 
 // ── Auth helpers ──────────────────────────────
@@ -74,7 +74,9 @@ function closeFormOnBg(e){ if(e.target===document.getElementById('modalBg')) clo
 // ═══════════════════════════════════════════════
 function show(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
+  const el = document.getElementById(id);
+  if(!el){ console.error('show(): element not found: #'+id+' — make sure index.html has screenVerify added!'); return; }
+  el.classList.add('active');
 }
 function toggleEye(id,icon){
   const inp=document.getElementById(id);
