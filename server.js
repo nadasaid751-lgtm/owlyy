@@ -3,6 +3,15 @@
 // ═══════════════════════════════════════════════
 require('dotenv').config();
 
+// 🔍 DEBUG
+console.log('ENV CHECK:', {
+  GROQ: !!process.env.GROQ_API_KEY,
+  JWT: !!process.env.JWT_SECRET,
+  GMAIL_USER: !!process.env.GMAIL_USER,
+  GMAIL_PASS: !!process.env.GMAIL_PASS,
+  PORT: process.env.PORT,
+});
+
 const express    = require('express');
 const multer     = require('multer');
 const cors       = require('cors');
@@ -12,15 +21,15 @@ const pdfParse   = require('pdf-parse');
 const bcrypt     = require('bcrypt');
 const jwt        = require('jsonwebtoken');
 const Database   = require('better-sqlite3');
-const nodemailer = require('nodemailer');   // ✅ NEW
+const nodemailer = require('nodemailer');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
 const GROQ_API_KEY  = process.env.GROQ_API_KEY;
 const JWT_SECRET    = process.env.JWT_SECRET;
-const GMAIL_USER    = process.env.GMAIL_USER;    // ✅ NEW  e.g. yourapp@gmail.com
-const GMAIL_PASS    = process.env.GMAIL_PASS;    // ✅ NEW  App Password (16 chars)
+const GMAIL_USER    = process.env.GMAIL_USER;
+const GMAIL_PASS    = process.env.GMAIL_PASS;
 
 if (!GROQ_API_KEY) { console.error('❌ GROQ_API_KEY missing!'); process.exit(1); }
 if (!JWT_SECRET)   { console.error('❌ JWT_SECRET missing!');   process.exit(1); }
