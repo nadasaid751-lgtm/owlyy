@@ -105,7 +105,7 @@ function setLevel(level){
 }
 
 // ═══════════════════════════════════════════════
-//  SIGN IN — Real Auth with DB
+//  SIGN IN
 // ═══════════════════════════════════════════════
 async function doSignIn(){
   const email    = document.getElementById('siEmail').value.trim();
@@ -139,7 +139,7 @@ async function doSignIn(){
 }
 
 // ═══════════════════════════════════════════════
-//  REGISTER — Real Auth with DB
+//  REGISTER — STEP 1: send verification code
 // ═══════════════════════════════════════════════
 async function doRegister(){
   const name     = document.getElementById('regName').value.trim();
@@ -151,36 +151,102 @@ async function doRegister(){
   if (password.length < 6){ shake(); showToast('⚠️ Password must be at least 6 characters'); return; }
 
   const btn = document.getElementById('signUpBtn');
-  btn.innerHTML='<i class="fas fa-circle-notch fa-spin"></i> Creating…'; btn.disabled=true;
+  btn.innerHTML='<i class="fas fa-circle-notch fa-spin"></i> Sending code…'; btn.disabled=true;
   try {
     const res  = await fetch(`${API}/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, email, password })
     });
-    const data = await res.json();
+    // ✅ قرأ response كـ text أولًا — يحمي من JSON parse crash
+    const text = await res.text();
+    let data = {};
+    try { data = JSON.parse(text); } catch(_) {
+      shake(); showToast('❌ Server returned invalid response: ' + text.slice(0,60));
+      btn.innerHTML='<i class="fas fa-user-check"></i> Sign Up'; btn.disabled=false; return;
+    }
     if (!res.ok){ shake(); showToast('❌ ' + (data.error||'Registration failed')); btn.innerHTML='<i class="fas fa-user-check"></i> Sign Up'; btn.disabled=false; return; }
-    authToken = data.token;
-    currentUser = data.user;
-    localStorage.setItem('owlyToken', authToken);
-    localStorage.setItem('owlyUserObj', JSON.stringify(currentUser));
     btn.innerHTML='<i class="fas fa-user-check"></i> Sign Up'; btn.disabled=false;
-    showToast('✅ Welcome, ' + data.user.name.split(' ')[0] + '!');
-    setTimeout(()=>{ closeForm(); enterApp(); }, 600);
+    showToast('📧 Check your email for a verification code!');
+    window._pendingVerifyEmail = email;
+    show('screenVerify');
   } catch(e){
-    shake(); showToast('❌ Server not running!');
+    console.error('Register fetch error:', e);
+    shake(); showToast('❌ ' + (e.message || 'Connection error'));
     btn.innerHTML='<i class="fas fa-user-check"></i> Sign Up'; btn.disabled=false;
   }
 }
 
+// ═══════════════════════════════════════════════
+//  VERIFY — STEP 2: confirm 6-digit code
+// ═══════════════════════════════════════════════
+async function doVerify(){
+  const code  = (document.getElementById('verifyCode')?.value || '').trim();
+  const email = window._pendingVerifyEmail || '';
+
+  if (!code || code.length !== 6){ shake(); showToast('⚠️ Enter the 6-digit code'); return; }
+  if (!email){ shake(); showToast('⚠️ Something went wrong. Please register again.'); show('screenRegister'); return; }
+
+  const btn = document.getElementById('verifyBtn');
+  btn.innerHTML='<i class="fas fa-circle-notch fa-spin"></i> Verifying…'; btn.disabled=true;
+  try {
+    const res  = await fetch(`${API}/auth/verify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, code })
+    });
+    // ✅ اقرأ الـ response كـ text الأول عشان تتجنب JSON parse error
+    const text = await res.text();
+    let data = {};
+    try { data = JSON.parse(text); } catch(_) {
+      shake(); showToast('❌ Server returned invalid response'); btn.innerHTML='<i class="fas fa-check-circle"></i> Verify'; btn.disabled=false; return;
+    }
+    if (!res.ok){ shake(); showToast('❌ ' + (data.error||'Verification failed')); btn.innerHTML='<i class="fas fa-check-circle"></i> Verify'; btn.disabled=false; return; }
+    authToken   = data.token;
+    currentUser = data.user;
+    localStorage.setItem('owlyToken',   authToken);
+    localStorage.setItem('owlyUserObj', JSON.stringify(currentUser));
+    window._pendingVerifyEmail = null;
+    btn.innerHTML='<i class="fas fa-check-circle"></i> Verify'; btn.disabled=false;
+    showToast('✅ Welcome, ' + data.user.name.split(' ')[0] + '!');
+    setTimeout(()=>{ closeForm(); enterApp(); }, 600);
+  } catch(e){
+    console.error('Verify fetch error:', e);
+    shake(); showToast('❌ ' + (e.message || 'Connection error'));
+    btn.innerHTML='<i class="fas fa-check-circle"></i> Verify'; btn.disabled=false;
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  RESEND CODE
+// ═══════════════════════════════════════════════
+async function doResendCode(){
+  const email = window._pendingVerifyEmail || '';
+  if (!email){ showToast('⚠️ Please register first.'); show('screenRegister'); return; }
+  try {
+    const res = await fetch(`${API}/auth/resend`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+    const data = await res.json();
+    if (!res.ok){ showToast('❌ ' + (data.error||'Could not resend.')); return; }
+    showToast('📧 New code sent!');
+  } catch(e){ showToast('❌ Server not running!'); }
+}
+
+// ═══════════════════════════════════════════════
+//  ENTER KEY HANDLER
+// ═══════════════════════════════════════════════
 document.addEventListener('keydown',e=>{
   if(e.key!=='Enter') return;
   const mb=document.getElementById('modalBg');
   if(!mb.classList.contains('open')) return;
   const active=document.querySelector('.screen.active');
   if(!active) return;
-  if(active.id==='screenSignIn') doSignIn();
+  if(active.id==='screenSignIn')   doSignIn();
   if(active.id==='screenRegister') doRegister();
+  if(active.id==='screenVerify')   doVerify();
 });
 
 // ═══════════════════════════════════════════════
@@ -211,10 +277,7 @@ window.addEventListener('DOMContentLoaded', async () => {
           return;
         }
       }
-    } catch(e){
-      // السيرفر مش شغال — امسح الـ token
-    }
-    // فشل التحقق — امسح كل حاجة وارجع لشاشة الـ Login
+    } catch(e){}
     localStorage.removeItem('owlyToken');
     localStorage.removeItem('owlyUserObj');
     authToken = null;
@@ -552,7 +615,6 @@ function showResult(){
   document.getElementById('resEmoji').textContent=emoji;
   document.getElementById('resMsg').textContent=msg;
 
-  // Adaptive difficulty
   const nextDiff=getDifficultyFromScore(score,total);
   const diffLabels2={easy:'🟢 Easy',medium:'🟡 Medium',hard:'🔴 Hard'};
   const diffMsg=nextDiff===currentQuizDifficulty?'Same level: '+diffLabels2[nextDiff]:'Next quiz: '+diffLabels2[nextDiff];
@@ -560,12 +622,10 @@ function showResult(){
   const adaptEl=document.getElementById('adaptiveDiff');
   if(adaptEl) adaptEl.textContent=diffMsg;
 
-  // Save score to DB
   const scoreStr=`${score}/${total}`;
   fetch(`${API}/quiz/score`,{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({score:scoreStr})}).catch(()=>{});
   _loadStatsFromDB();
 
-  // Weakness notes
   const wb=document.getElementById('weaknessBlock'); if(wb) wb.remove();
   if(quizWrongs.length>0){
     const block=document.createElement('div');
