@@ -609,8 +609,12 @@ app.delete('/api/session/:id', authMiddleware, (req, res) => {
 });
 
 // ── Start ───────────────────────────────────────
-app.listen(PORT, async () => {
-  console.log('🦉 Owly v2.1 running on http://localhost:' + PORT);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log('🦉 Owly running on port', PORT);
   console.log('📦 SQLite DB:', DB_PATH);
-  await validateApiKey();
+});
+
+// run separately (outside listen)
+validateApiKey().catch(err => {
+  console.log('⚠️ Groq validation failed:', err.message);
 });
