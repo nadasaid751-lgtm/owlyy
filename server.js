@@ -12,7 +12,7 @@ const pdfParse   = require('pdf-parse');
 const bcrypt     = require('bcrypt');
 const jwt        = require('jsonwebtoken');
 const Database   = require('better-sqlite3');
-const Brevo = require('@getbrevo/brevo');
+const SibApiV3Sdk = require('@getbrevo/brevo');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -34,12 +34,12 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'Public')));
 
 // ── Brevo Email ────────────────────────────────
-const brevoClient = new Brevo.TransactionalEmailsApi();
+const brevoClient = new SibApiV3Sdk.TransactionalEmailsApi();
 brevoClient.authentications['api-key'].apiKey = BREVO_API_KEY;
 console.log('✅ Brevo email service ready!');
 
 async function sendVerificationEmail(toEmail, code) {
-  const sendSmtpEmail = new Brevo.SendSmtpEmail();
+  const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
   sendSmtpEmail.sender    = { name: 'SMbot', email: BREVO_SENDER };
   sendSmtpEmail.to        = [{ email: toEmail }];
   sendSmtpEmail.subject   = 'Your Owly Verification Code';
