@@ -36,8 +36,12 @@ app.use(express.static(path.join(__dirname, 'Public')));
 
 // ── Gmail SMTP ─────────────────────────────────
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: { user: GMAIL_USER, pass: GMAIL_PASS }
+  host: 'smtp.gmail.com',
+  port: 587,
+  secure: false,
+  requireTLS: true,
+  auth: { user: GMAIL_USER, pass: GMAIL_PASS },
+  tls: { rejectUnauthorized: false }
 });
 
 // تحقق من الاتصال عند بدء السيرفر
