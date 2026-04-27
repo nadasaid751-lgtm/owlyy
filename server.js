@@ -12,7 +12,7 @@ const pdfParse   = require('pdf-parse');
 const bcrypt     = require('bcrypt');
 const jwt        = require('jsonwebtoken');
 const Database   = require('better-sqlite3');
-const SibApiV3Sdk = require('@getbrevo/brevo');
+
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -33,26 +33,36 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'Public')));
 
-// ── Brevo Email ────────────────────────────────
-const brevoClient = new SibApiV3Sdk.TransactionalEmailsApi();
-brevoClient.authentications['api-key'].apiKey = BREVO_API_KEY;
+// ── Brevo Email (fetch API) ─────────────────────
 console.log('✅ Brevo email service ready!');
 
 async function sendVerificationEmail(toEmail, code) {
-  const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
-  sendSmtpEmail.sender    = { name: 'SMbot', email: BREVO_SENDER };
-  sendSmtpEmail.to        = [{ email: toEmail }];
-  sendSmtpEmail.subject   = 'Your Owly Verification Code';
-  sendSmtpEmail.htmlContent = `
-    <div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;padding:32px;background:#f9f9f9;border-radius:12px;">
-      <h2 style="color:#5b4fcf;margin-bottom:8px;">🦉 Welcome to Owly!</h2>
-      <p style="color:#444;">Use the code below to verify your email address:</p>
-      <div style="font-size:36px;font-weight:bold;letter-spacing:8px;color:#5b4fcf;text-align:center;padding:24px 0;">${code}</div>
-      <p style="color:#888;font-size:13px;">This code expires in <strong>10 minutes</strong>. Do not share it with anyone.</p>
-      <hr style="border:none;border-top:1px solid #ddd;margin:24px 0;">
-      <p style="color:#aaa;font-size:12px;text-align:center;">If you didn't request this, just ignore this email.</p>
-    </div>`;
-  await brevoClient.sendTransacEmail(sendSmtpEmail);
+  const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: {
+      'accept': 'application/json',
+      'api-key': BREVO_API_KEY,
+      'content-type': 'application/json'
+    },
+    body: JSON.stringify({
+      sender: { name: 'SMbot', email: BREVO_SENDER },
+      to: [{ email: toEmail }],
+      subject: 'Your Owly Verification Code',
+      htmlContent: `
+        <div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;padding:32px;background:#f9f9f9;border-radius:12px;">
+          <h2 style="color:#5b4fcf;margin-bottom:8px;">🦉 Welcome to Owly!</h2>
+          <p style="color:#444;">Use the code below to verify your email address:</p>
+          <div style="font-size:36px;font-weight:bold;letter-spacing:8px;color:#5b4fcf;text-align:center;padding:24px 0;">${code}</div>
+          <p style="color:#888;font-size:13px;">This code expires in <strong>10 minutes</strong>. Do not share it with anyone.</p>
+          <hr style="border:none;border-top:1px solid #ddd;margin:24px 0;">
+          <p style="color:#aaa;font-size:12px;text-align:center;">If you didn't request this, just ignore this email.</p>
+        </div>`
+    })
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error('Brevo error: ' + err);
+  }
 }
 
 // ── SQLite ──────────────────────────────────────
