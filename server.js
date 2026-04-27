@@ -12,20 +12,19 @@ const pdfParse   = require('pdf-parse');
 const bcrypt     = require('bcrypt');
 const jwt        = require('jsonwebtoken');
 const Database   = require('better-sqlite3');
-const nodemailer = require('nodemailer');
+const Brevo = require('@getbrevo/brevo');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
 const GROQ_API_KEY  = process.env.GROQ_API_KEY;
 const JWT_SECRET    = process.env.JWT_SECRET;
-const GMAIL_USER    = process.env.GMAIL_USER;
-const GMAIL_PASS    = process.env.GMAIL_PASS;
+const BREVO_API_KEY = process.env.BREVO_API_KEY;
+const BREVO_SENDER  = process.env.BREVO_SENDER || 'owly.app.mailer@gmail.com';
 
-if (!GROQ_API_KEY) { console.error('❌ GROQ_API_KEY missing!'); process.exit(1); }
-if (!JWT_SECRET)   { console.error('❌ JWT_SECRET missing!');   process.exit(1); }
-if (!GMAIL_USER)   { console.error('❌ GMAIL_USER missing!');   process.exit(1); }
-if (!GMAIL_PASS)   { console.error('❌ GMAIL_PASS missing!');   process.exit(1); }
+if (!GROQ_API_KEY)  { console.error('❌ GROQ_API_KEY missing!');  process.exit(1); }
+if (!JWT_SECRET)    { console.error('❌ JWT_SECRET missing!');    process.exit(1); }
+if (!BREVO_API_KEY) { console.error('❌ BREVO_API_KEY missing!'); process.exit(1); }
 
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const MODEL    = 'llama-3.1-8b-instant';
@@ -34,37 +33,26 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'Public')));
 
-// ── Gmail SMTP ─────────────────────────────────
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 587,
-  secure: false,
-  requireTLS: true,
-  auth: { user: GMAIL_USER, pass: GMAIL_PASS },
-  tls: { rejectUnauthorized: false }
-});
-
-// تحقق من الاتصال عند بدء السيرفر
-transporter.verify((error) => {
-  if (error) console.error('❌ Gmail SMTP Error:', error.message);
-  else console.log('✅ Gmail SMTP ready!');
-});
+// ── Brevo Email ────────────────────────────────
+const brevoClient = new Brevo.TransactionalEmailsApi();
+brevoClient.authentications['api-key'].apiKey = BREVO_API_KEY;
+console.log('✅ Brevo email service ready!');
 
 async function sendVerificationEmail(toEmail, code) {
-  await transporter.sendMail({
-    from: `"SMbot" <${GMAIL_USER}>`,
-    to: toEmail,
-    subject: 'Your Owly Verification Code',
-    html: `
-      <div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;padding:32px;background:#f9f9f9;border-radius:12px;">
-        <h2 style="color:#5b4fcf;margin-bottom:8px;">🦉 Welcome to Owly!</h2>
-        <p style="color:#444;">Use the code below to verify your email address:</p>
-        <div style="font-size:36px;font-weight:bold;letter-spacing:8px;color:#5b4fcf;text-align:center;padding:24px 0;">${code}</div>
-        <p style="color:#888;font-size:13px;">This code expires in <strong>10 minutes</strong>. Do not share it with anyone.</p>
-        <hr style="border:none;border-top:1px solid #ddd;margin:24px 0;">
-        <p style="color:#aaa;font-size:12px;text-align:center;">If you didn't request this, just ignore this email.</p>
-      </div>`
-  });
+  const sendSmtpEmail = new Brevo.SendSmtpEmail();
+  sendSmtpEmail.sender    = { name: 'SMbot', email: BREVO_SENDER };
+  sendSmtpEmail.to        = [{ email: toEmail }];
+  sendSmtpEmail.subject   = 'Your Owly Verification Code';
+  sendSmtpEmail.htmlContent = `
+    <div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;padding:32px;background:#f9f9f9;border-radius:12px;">
+      <h2 style="color:#5b4fcf;margin-bottom:8px;">🦉 Welcome to Owly!</h2>
+      <p style="color:#444;">Use the code below to verify your email address:</p>
+      <div style="font-size:36px;font-weight:bold;letter-spacing:8px;color:#5b4fcf;text-align:center;padding:24px 0;">${code}</div>
+      <p style="color:#888;font-size:13px;">This code expires in <strong>10 minutes</strong>. Do not share it with anyone.</p>
+      <hr style="border:none;border-top:1px solid #ddd;margin:24px 0;">
+      <p style="color:#aaa;font-size:12px;text-align:center;">If you didn't request this, just ignore this email.</p>
+    </div>`;
+  await brevoClient.sendTransacEmail(sendSmtpEmail);
 }
 
 // ── SQLite ──────────────────────────────────────
