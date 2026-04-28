@@ -1,4 +1,4 @@
 node_modules/
 .env
-owly.db
+smbot.db
 uploads/

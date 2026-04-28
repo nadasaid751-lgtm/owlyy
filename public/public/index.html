@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SMBOT — Study Mate Bot</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'><rect width='40' height='40' rx='10' fill='%23111827'/><rect width='40' height='40' rx='10' fill='url(%23g)'/><text x='50%25' y='56%25' font-size='15' font-weight='800' text-anchor='middle' dominant-baseline='middle' font-family='Georgia,serif' fill='white' letter-spacing='-0.5'>SM</text><defs><linearGradient id='g' x1='0' y1='0' x2='40' y2='40'><stop offset='0%25' stop-color='%23059669'/><stop offset='100%25' stop-color='%230284C7'/></linearGradient></defs></svg>"/>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="style.css"/>
+  <style>
+    /* ── TEXT LOGO STYLES ── */
+    .text-logo-wrap {
+      display: flex;
+      flex-direction: column;
+      line-height: 1;
+    }
+    .text-logo-main {
+      font-family: 'Fraunces', serif;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .text-logo-sub {
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 400;
+      color: var(--text-muted);
+      letter-spacing: 0.1px;
+      line-height: 1.1;
+    }
+    /* Sizes: nav (compact) */
+    .brand .text-logo-main  { font-size: 20px; }
+    .brand .text-logo-sub   { font-size: 9px; text-transform: uppercase; letter-spacing: 1px; }
+    /* Auth brand (medium) */
+    .auth-brand .text-logo-main { font-size: 26px; }
+    .auth-brand .text-logo-sub  { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+    /* Hero (large) — handled below in section */
+    .hero-logo-text-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .hero-logo-text-wrap .text-logo-main { font-size: 52px; letter-spacing: -2px; }
+    .hero-logo-text-wrap .text-logo-sub  { font-size: 11px; text-transform: uppercase; letter-spacing: 2.5px; margin-top: 2px; }
+
+    /* Logo mark box replacing SVG in nav */
+    .logo-mark-text {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #059669, #0284C7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .logo-mark-text span {
+      font-family: 'Fraunces', serif;
+      font-weight: 700;
+      font-size: 15px;
+      color: #fff;
+      letter-spacing: -0.5px;
+    }
+    /* Auth brand row stays flex row */
+    .auth-brand { gap: 12px; }
+
+    /* Hero logo ring: replace SVG with styled text block */
+    .hero-logo-ring {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 160px;
+      height: 160px;
+    }
+    .hero-logo-inner-box {
+      width: 100px;
+      height: 100px;
+      border-radius: 26px;
+      background: linear-gradient(135deg, #059669, #0284C7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 8px 40px rgba(52,211,153,0.35);
+      position: relative;
+      z-index: 2;
+    }
+    .hero-logo-inner-box span {
+      font-family: 'Fraunces', serif;
+      font-weight: 700;
+      font-size: 38px;
+      color: #fff;
+      letter-spacing: -2px;
+    }
+
+    /* Make feature pills and cards show pointer cursor */
+    .pill.feature-pill { cursor: pointer; }
+    .feat-item.feature-card { cursor: pointer; }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════ WELCOME PAGE ══════════════ -->
+<div id="welcome-page" class="page-view">
+
+  <header class="lp-header" id="lpHeader">
+    <div class="lp-header-inner">
+      <div class="brand">
+        <div class="logo-mark-text"><span>SM</span></div>
+        <div class="text-logo-wrap">
+          <span class="text-logo-main">SMBOT</span>
+          <span class="text-logo-sub">Study Mate Bot</span>
+        </div>
+      </div>
+
+      <nav class="lp-nav-links">
+        <a href="#hero" class="lp-nav-a" onclick="smoothTo('hero')">Home</a>
+        <a href="#about" class="lp-nav-a" onclick="smoothTo('about')">About</a>
+        <a href="#info" class="lp-nav-a" onclick="smoothTo('info')">Info</a>
+      </nav>
+
+      <div class="lp-nav-right">
+        <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+          <span class="toggle-track">
+            <span class="toggle-thumb">
+              <span class="toggle-icon-sun">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                  <circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                </svg>
+              </span>
+              <span class="toggle-icon-moon">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                </svg>
+              </span>
+            </span>
+          </span>
+        </button>
+        <button class="btn-cta-sm" onclick="navigate('auth-page')">Get Started</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── SECTION 1: HERO ── -->
+  <section class="lp-section lp-hero" id="hero">
+    <div class="lp-bg">
+      <div class="lp-grid"></div>
+      <div class="glow-orb orb1"></div>
+      <div class="glow-orb orb2"></div>
+      <div class="glow-orb orb3"></div>
+    </div>
+
+    <div class="hero-inner reveal">
+      <!-- Text Logo Block -->
+      <div class="hero-logo-block">
+        <div class="hero-logo-ring">
+          <div class="hero-logo-inner-box"><span>SM</span></div>
+          <div class="hero-logo-halo"></div>
+        </div>
+      </div>
+
+      <div class="hero-badge">
+        <span class="badge-dot"></span>
+        AI-Powered Study Assistant
+      </div>
+
+      <h1 class="hero-h1">SMBOT</h1>
+      <p class="hero-subtitle">Study Mate Bot</p>
+      <p class="hero-slogan">Study Smart, Not Hard</p>
+
+      <p class="hero-desc">
+        SMBOT — Study Mate Bot is an AI-powered platform that helps you learn smarter. Upload your study materials, get instant summaries, ask questions, and test yourself with adaptive quizzes—all in one place.
+      </p>
+
+      <!-- ↓ CHANGED: pills now redirect to auth page on click -->
+      <div class="hero-pills">
+        <span class="pill feature-pill" onclick="navigate('auth-page')"> PDF Upload</span>
+        <span class="pill feature-pill" onclick="navigate('auth-page')"> AI Summary</span>
+        <span class="pill feature-pill" onclick="navigate('auth-page')"> Q&amp;A Chat</span>
+        <span class="pill feature-pill" onclick="navigate('auth-page')"> Adaptive Quiz</span>
+      </div>
+
+      <a class="scroll-hint" href="#about" onclick="smoothTo('about')">
+        <span class="sh-label">Scroll to explore</span>
+        <span class="sh-arrow">↓</span>
+      </a>
+    </div>
+  </section>
+
+  <!-- ── SECTION 2: ABOUT ── -->
+  <section class="lp-section lp-about" id="about">
+    <div class="lp-section-inner">
+      <div class="section-eyebrow reveal">About the Project</div>
+      <h2 class="section-title reveal">What is SMBOT?</h2>
+
+      <p class="about-para reveal">
+        SMBOT is a smart, AI-powered study companion built to transform the way students engage with their learning materials. Instead of spending hours re-reading dense textbooks or lecture notes, you simply upload any PDF and SMBOT instantly gets to work — analyzing the content, understanding the context, and making it interactive for you.
+      </p>
+      <p class="about-para reveal">
+        The platform generates clean, intelligent summaries that capture the most important ideas in your document, so you can quickly grasp the big picture without getting lost in details. When you want to go deeper, the interactive Q&amp;A chat lets you have a genuine conversation with your material — ask anything, at any depth level, and get clear, focused answers grounded in your own content.
+      </p>
+      <p class="about-para reveal">
+        To make sure you've truly absorbed what you've studied, SMBOT includes an adaptive quiz system that generates multiple-choice questions tailored to your document. The quiz adapts to your performance — if you score well, the difficulty increases; if you struggle, it eases back — ensuring you're always challenged at the right level. Everything you need to study efficiently is in one seamless, beautifully designed experience.
+      </p>
+
+      <!-- ↓ CHANGED: each feat-item now redirects to auth page on click -->
+      <div class="feat-row">
+        <div class="feat-item feature-card reveal" onclick="navigate('auth-page')">
+          <div class="fi-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          </div>
+          <div class="fi-text">
+            <h4>PDF Upload &amp; Analysis</h4>
+            <p>Drag and drop any PDF — lecture notes, textbook chapters, or slides — and SMBOT extracts and understands the full content instantly.</p>
+          </div>
+        </div>
+        <div class="feat-item feature-card reveal" onclick="navigate('auth-page')">
+          <div class="fi-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          </div>
+          <div class="fi-text">
+            <h4>Instant AI Summaries</h4>
+            <p>Get a concise, well-structured summary of any document in seconds. Understand the key points without reading every word.</p>
+          </div>
+        </div>
+        <div class="feat-item feature-card reveal" onclick="navigate('auth-page')">
+          <div class="fi-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          </div>
+          <div class="fi-text">
+            <h4>Interactive Q&amp;A Chat</h4>
+            <p>Ask questions directly about your material. Choose your explanation level — simple, normal, or advanced — and get answers tailored to you.</p>
+          </div>
+        </div>
+        <div class="feat-item feature-card reveal" onclick="navigate('auth-page')">
+          <div class="fi-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </div>
+          <div class="fi-text">
+            <h4>Adaptive MCQ Quizzes</h4>
+            <p>Test yourself with AI-generated quizzes that adapt to your score. Master your material through active recall and spaced repetition.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── SECTION 3: INFO ── -->
+  <section class="lp-section lp-info" id="info">
+    <div class="lp-section-inner lp-info-inner">
+      <div class="info-card reveal">
+        <div class="ic-year">2025</div>
+        <div class="ic-divider"></div>
+        <div class="ic-body">
+          <div class="ic-badge">Academic Project</div>
+          <h3 class="ic-title">Faculty of Computer &amp; Artificial Intelligence</h3>
+          <p class="ic-institution">Sphinx University</p>
+          <div class="ic-supervisor">
+            <span class="ic-sup-label">Supervised by</span>
+            <span class="ic-sup-name">Dr. Amr A.Hassanein</span>
+          </div>
+          <div class="ic-tags">
+            <span class="ic-tag">Artificial Intelligence</span>
+            <span class="ic-tag">Natural Language Processing</span>
+            <span class="ic-tag">EdTech</span>
+            <span class="ic-tag">Full-Stack Web</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="info-quote reveal">
+        <div class="iq-mark">"</div>
+        <p class="iq-text">Education is not the learning of facts, but the training of the mind to think.</p>
+        <p class="iq-author">— Albert Einstein</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── SECTION 4: CTA ── -->
+  <section class="lp-section lp-cta" id="cta">
+    <div class="lp-cta-inner">
+      <div class="cta-glow"></div>
+      <div class="reveal">
+        <div class="cta-badge">
+          <span class="badge-dot"></span>
+          Ready to start?
+        </div>
+        <h2 class="cta-title">Start learning smarter today.</h2>
+        <p class="cta-sub">Join SMBOT and transform the way you study. Upload your first PDF in seconds — completely free.</p>
+        <button class="btn-cta-hero" onclick="navigate('auth-page')">
+          Get Started Free
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </button>
+        <p class="hero-note" style="margin-top:14px">Free to use · No credit card required</p>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="lp-footer">
+      <div class="lf-brand">
+        <div class="logo-mark-text" style="width:26px;height:26px;border-radius:7px;"><span style="font-size:11px;">SM</span></div>
+        <span style="font-family:'Fraunces',serif;font-weight:700;">SMBOT</span>
+      </div>
+      <p class="lf-copy">© 2025 SMBOT · Study Mate Bot · Sphinx University</p>
+    </footer>
+  </section>
+
+</div><!-- end welcome-page -->
+
+<!-- ══════════════ AUTH PAGE ══════════════ -->
+<div id="auth-page" class="page-view">
+  <div class="auth-bg">
+    <div class="auth-grid"></div>
+    <div class="glow-orb orb1"></div>
+    <div class="glow-orb orb2"></div>
+  </div>
+
+  <div class="auth-back">
+    <button onclick="navigate('welcome-page')" class="back-btn">← Back</button>
+    <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+      <span class="toggle-track">
+        <span class="toggle-thumb">
+          <span class="toggle-icon-sun">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+              <circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+            </svg>
+          </span>
+          <span class="toggle-icon-moon">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+            </svg>
+          </span>
+        </span>
+      </span>
+    </button>
+  </div>
+
+  <div class="auth-container">
+    <div class="auth-brand">
+      <div class="logo-mark-text" style="width:42px;height:42px;border-radius:12px;"><span style="font-size:18px;">SM</span></div>
+      <div class="text-logo-wrap">
+        <span class="text-logo-main" style="font-size:26px;">SMBOT</span>
+        <span class="text-logo-sub" style="font-size:10px;">Study Smart, Not Hard</span>
+      </div>
+    </div>
+
+    <div class="auth-card">
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tab-signin" onclick="switchTab('signin')">Sign In</button>
+        <button class="auth-tab" id="tab-register" onclick="switchTab('register')">Register</button>
+        <div class="tab-indicator" id="tabIndicator"></div>
+      </div>
+
+      <!-- Sign In -->
+      <div class="auth-form active" id="form-signin">
+        <p class="form-subtitle">Welcome back — let's continue studying </p>
+        <div class="field-group">
+          <label class="field-label">Email</label>
+          <div class="field-wrap">
+            <span class="field-ico">✉</span>
+            <input type="email" id="siEmail" class="field-input" placeholder="you@gmail.com"/>
+          </div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Password</label>
+          <div class="field-wrap">
+            <span class="field-ico">🔒</span>
+            <input type="password" id="siPassword" class="field-input" placeholder="Enter password"/>
+            <button type="button" class="eye-btn" onclick="toggleEye('siPassword', this)">👁</button>
+          </div>
+        </div>
+        <div class="form-meta">
+          <span class="forgot-link">Forgot password?</span>
+        </div>
+        <button class="btn-auth" id="signinBtn" onclick="doSignIn()">Sign In →</button>
+        <p class="form-switch">No account? <a onclick="switchTab('register')">Register here</a></p>
+      </div>
+
+      <!-- Register -->
+      <div class="auth-form" id="form-register">
+        <p class="form-subtitle">Create your SMBOT account </p>
+        <div class="field-group">
+          <label class="field-label">Full Name</label>
+          <div class="field-wrap">
+            <span class="field-ico">👤</span>
+            <input type="text" id="regName" class="field-input" placeholder="John Doe"/>
+          </div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Email</label>
+          <div class="field-wrap">
+            <span class="field-ico">✉</span>
+            <input type="email" id="regEmail" class="field-input" placeholder="you@gmail.com"/>
+          </div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Password</label>
+          <div class="field-wrap">
+            <span class="field-ico">🔒</span>
+            <input type="password" id="regPassword" class="field-input" placeholder="Min 6 characters"/>
+            <button type="button" class="eye-btn" onclick="toggleEye('regPassword', this)">👁</button>
+          </div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Confirm Password</label>
+          <div class="field-wrap">
+            <span class="field-ico">🔒</span>
+            <input type="password" id="regConfirm" class="field-input" placeholder="Repeat password"/>
+          </div>
+        </div>
+        <button class="btn-auth" id="registerBtn" onclick="doRegister()">Create Account →</button>
+        <p class="form-switch">Have an account? <a onclick="switchTab('signin')">Sign In</a></p>
+      </div>
+
+      <!-- Verify -->
+      <div class="auth-form" id="form-verify">
+        <p class="form-subtitle">Check your email for a 6-digit code 📧</p>
+        <div class="field-group">
+          <label class="field-label">Verification Code</label>
+          <div class="field-wrap">
+            <span class="field-ico">🔑</span>
+            <input type="text" id="verifyCode" class="field-input code-input" placeholder="_ _ _ _ _ _" maxlength="6" inputmode="numeric"/>
+          </div>
+        </div>
+        <button class="btn-auth" id="verifyBtn" onclick="doVerify()">Verify →</button>
+        <p class="form-switch">Didn't get it? <a onclick="doResendCode()">Resend code</a></p>
+        <p class="form-switch"><a onclick="switchTab('register')">← Back to Register</a></p>
+      </div>
+    </div>
+  </div>
+</div><!-- end auth-page -->
+
+<!-- ══════════════ APP PAGE ══════════════ -->
+<div id="app-page" class="page-view">
+  <nav class="app-nav">
+    <div class="brand" onclick="goPage('dashboard')">
+      <div class="logo-mark-text" style="width:30px;height:30px;border-radius:8px;"><span style="font-size:13px;">SM</span></div>
+      <div class="text-logo-wrap">
+        <span class="text-logo-main" style="font-size:19px;">SMBOT</span>
+        <span class="text-logo-sub" style="font-size:8.5px;">Study Mate Bot</span>
+      </div>
+    </div>
+
+    <ul class="nav-menu" id="navMenu">
+      <li><a class="nav-link" data-page="dashboard" onclick="goPage('dashboard')">Home</a></li>
+      <li><a class="nav-link" data-page="upload" onclick="goPage('upload')"> Upload</a></li>
+      <li><a class="nav-link" data-page="summary" onclick="goPage('summary')"> Summary</a></li>
+      <li><a class="nav-link" data-page="qa" onclick="goPage('qa')"> Q&A</a></li>
+      <li><a class="nav-link" data-page="quiz" onclick="goPage('quiz')"> Quiz</a></li>
+      <li><a class="nav-link" data-page="chats" onclick="goPage('chats')"> Chats</a></li>
+    </ul>
+
+    <div class="nav-actions">
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+        <span class="toggle-track">
+          <span class="toggle-thumb">
+            <span class="toggle-icon-sun">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                <circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+              </svg>
+            </span>
+            <span class="toggle-icon-moon">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+              </svg>
+            </span>
+          </span>
+        </span>
+      </button>
+      <button class="btn-logout" onclick="doLogout()">Logout</button>
+      <button class="hamburger" id="hamburger" onclick="toggleDrawer()">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
+
+  <div class="mobile-drawer" id="mobileDrawer">
+    <a onclick="goPage('dashboard')"> Home</a>
+    <a onclick="goPage('upload')"> Upload PDF</a>
+    <a onclick="goPage('summary')"> Summary</a>
+    <a onclick="goPage('qa')"> Q&A</a>
+    <a onclick="goPage('quiz')"> Quiz</a>
+    <a onclick="goPage('chats')"> Chats</a>
+    <hr/>
+    <a onclick="doLogout()"> Logout</a>
+  </div>
+
+  <div class="app-body">
+
+    <!-- Dashboard -->
+    <div class="app-section active" id="sec-dashboard">
+      <div class="section-header">
+        <h1>Home</h1>
+        <p id="welcomeMsg">Welcome back </p>
+      </div>
+      <div class="dash-banner">
+        <div class="db-left">
+          <div class="db-tag"><span class="status-dot"></span> Active Session</div>
+          <h2 id="dashWelcome">Ready to learn something new?</h2>
+          <p>Upload a PDF and let SMBOT do the heavy lifting.</p>
+          <button class="btn-primary" onclick="goPage('upload')">Start Studying →</button>
+        </div>
+        <div class="db-right">
+          <div style="opacity:0.15;font-family:'Fraunces',serif;font-weight:700;font-size:64px;letter-spacing:-3px;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1;">SM</div>
+        </div>
+      </div>
+
+      <div class="feat-grid">
+        <div class="feat-card" onclick="goPage('upload')">
+          <h3>Upload PDF</h3>
+          <p>Import lecture notes, slides, or textbook chapters.</p>
+          <span class="fc-arrow">→</span>
+        </div>
+        <div class="feat-card" onclick="goPage('summary')">
+          <h3>AI Summary</h3>
+          <p>Get an AI-generated summary of your material.</p>
+          <span class="fc-arrow">→</span>
+        </div>
+        <div class="feat-card" onclick="goPage('qa')">
+          <h3>Ask Questions</h3>
+          <p>Chat with your document and get instant answers.</p>
+          <span class="fc-arrow">→</span>
+        </div>
+        <div class="feat-card" onclick="goPage('quiz')">
+          <h3>Quiz Mode</h3>
+          <p>Adaptive MCQ quiz to test your understanding.</p>
+          <span class="fc-arrow">→</span>
+        </div>
+      </div>
+
+      <div class="stats-row">
+        <div class="stat-box">
+          <div class="sb-ico">📄</div>
+          <div class="sb-val" id="statPdfs">0</div>
+          <div class="sb-lbl">PDFs Uploaded</div>
+        </div>
+        <div class="stat-box">
+          <div class="sb-ico">🎯</div>
+          <div class="sb-val" id="statQuizzes">0</div>
+          <div class="sb-lbl">Quizzes Taken</div>
+        </div>
+        <div class="stat-box">
+          <div class="sb-ico">🏆</div>
+          <div class="sb-val" id="statBest">—</div>
+          <div class="sb-lbl">Best Score</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Upload -->
+    <div class="app-section" id="sec-upload">
+      <div class="section-header"><h1>Upload PDF</h1><p>Import your study material to unlock all features.</p></div>
+      <div class="glass-card">
+        <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()" ondragover="dzOver(event)" ondragleave="dzLeave(event)" ondrop="dzDrop(event)">
+          <div class="dz-icon">📄</div>
+          <h3>Drag &amp; Drop your PDF</h3>
+          <p>PDF only · Max 50 MB</p>
+          <button class="btn-primary" onclick="event.stopPropagation(); document.getElementById('fileInput').click()">Browse Files</button>
+          <input type="file" id="fileInput" accept=".pdf" onchange="pickFile(this.files[0])"/>
+        </div>
+        <div class="file-chip" id="fileChip">
+          <span class="chip-ico">📄</span>
+          <span id="chipName" class="chip-name">—</span>
+          <span id="chipSize" class="chip-size">—</span>
+          <button onclick="clearFile()" class="chip-rm">✕</button>
+        </div>
+        <div class="prog-block" id="progBlock">
+          <div class="prog-hd"><span id="progStatus">Uploading…</span><span id="progPct">0%</span></div>
+          <div class="prog-track"><div class="prog-fill" id="progFill"></div></div>
+        </div>
+        <div class="upload-cta">
+          <button class="btn-primary" id="uploadBtn" onclick="doUpload()" disabled>Upload &amp; Analyse</button>
+        </div>
+        <div class="auto-qs" id="autoQs" style="display:none">
+          <div class="aq-head">✨ <span>SMBOT suggests these questions:</span></div>
+          <div class="aq-list" id="aqList"></div>
+          <p class="aq-hint">Click any question to ask in Q&A</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Summary -->
+    <div class="app-section" id="sec-summary">
+      <div class="section-header"><h1>AI Summary</h1><p>AI-generated overview of your document.</p></div>
+      <div class="sum-toolbar">
+        <button class="btn-primary" onclick="regenSummary()">↺ Regenerate</button>
+        <button class="btn-outline" id="translateBtn" onclick="translateSummary()" style="display:none">🌐 Translate to Arabic</button>
+        <button class="btn-outline" onclick="downloadSummary()">⬇ Download</button>
+      </div>
+      <div class="glass-card">
+        <div class="sum-body" id="summaryBody">
+          <p style="color:var(--text-muted)">📄 Upload a PDF first to generate a summary.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q&A -->
+    <div class="app-section" id="sec-qa">
+      <div class="section-header"><h1>Q&amp;A Chat</h1><p>Ask SMBOT anything about your material.</p></div>
+      <div class="chat-container">
+        <div class="chat-messages" id="chatMessages">
+          <div class="bubble-row bot">
+            <div class="bubble-av">🤖</div>
+            <div class="bubble">Hi! I'm SMBOT — upload a PDF and ask me anything about it!</div>
+          </div>
+        </div>
+        <div class="level-bar">
+          <span class="level-lbl">Explain as:</span>
+          <button class="lvl-btn active" id="lvl-simple" onclick="setLevel('simple')">🟢 Simple</button>
+          <button class="lvl-btn" id="lvl-normal" onclick="setLevel('normal')">🟡 Normal</button>
+          <button class="lvl-btn" id="lvl-advanced" onclick="setLevel('advanced')">🔴 Advanced</button>
+        </div>
+        <div class="chat-input-row">
+          <textarea class="chat-textarea" id="chatInp" placeholder="Ask SMBOT anything…" rows="1" onkeydown="chatKey(event)" oninput="autoResize(this)"></textarea>
+          <button class="chat-send-btn" onclick="sendMsg()">→</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quiz -->
+    <div class="app-section" id="sec-quiz">
+      <div class="section-header"><h1>Quiz Mode</h1><p>Test your understanding with adaptive MCQ.</p></div>
+      <div id="quizGame">
+        <div class="quiz-progress">
+          <div class="quiz-pb"><div class="quiz-pf" id="quizFill" style="width:0%"></div></div>
+          <span class="quiz-lbl" id="quizLbl">1 / 10</span>
+        </div>
+        <div class="quiz-card">
+          <div class="quiz-num" id="quizNum">Question 1</div>
+          <div class="quiz-q" id="quizQ">Upload a PDF to start your quiz.</div>
+          <div class="quiz-opts" id="quizOpts"></div>
+        </div>
+        <div class="quiz-actions">
+          <button class="btn-primary" id="quizNext" onclick="nextQ()" disabled>Next →</button>
+        </div>
+      </div>
+      <div class="quiz-result glass-card" id="quizResult" style="display:none">
+        <div class="res-emoji" id="resEmoji">🎉</div>
+        <div class="res-title">Quiz Complete!</div>
+        <div class="res-msg" id="resMsg">Great job!</div>
+        <div class="res-score" id="resScore">0 / 5</div>
+        <div class="adaptive-diff" id="adaptiveDiff"></div>
+        <div id="weaknessBlock"></div>
+        <div class="res-btns">
+          <button class="btn-primary" onclick="startQuiz()">↺ Try Again</button>
+          <button class="btn-outline" onclick="goPage('dashboard')">🏠 Dashboard</button>
+        </div>
+        <div class="diff-manual">
+          <span>Choose difficulty:</span>
+          <button class="diff-btn" onclick="startQuiz('easy')">🟢 Easy</button>
+          <button class="diff-btn" onclick="startQuiz('medium')">🟡 Medium</button>
+          <button class="diff-btn" onclick="startQuiz('hard')">🔴 Hard</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chats -->
+    <div class="app-section" id="sec-chats">
+      <div class="section-header"><h1>Chats</h1><p>Your previous conversations with SMBOT.</p></div>
+      <div class="chats-toolbar">
+        <button class="btn-primary" onclick="startNewChat()">+ New Chat</button>
+        <div class="search-wrap">
+          <span class="search-ico">🔍</span>
+          <input type="text" class="search-inp" id="chatsSearch" placeholder="Search conversations…" oninput="filterChats(this.value)"/>
+        </div>
+      </div>
+      <div class="chats-empty" id="chatsEmpty">
+        <div class="empty-ico">🤖</div>
+        <p class="empty-title">No chats yet</p>
+        <p class="empty-sub">Start a conversation in Q&A and it'll appear here.</p>
+      </div>
+      <div class="chats-grid" id="chatsGrid"></div>
+    </div>
+
+  </div><!-- end app-body -->
+</div><!-- end app-page -->
+
+<div class="toast" id="toast"></div>
+<script src="script.js"></script>
+</body>
+</html>
