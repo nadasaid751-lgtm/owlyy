@@ -1,10 +1,7 @@
 // ═══════════════════════════════════════════════
-//  OWLY v2.1 — SQLite + Auth + Groq Free API
+//  SMbot v2.1 — SQLite + Auth + Groq Free API
 // ═══════════════════════════════════════════════
 require('dotenv').config();
-
-console.log("KEY:", process.env.BREVO_API_KEY);
-console.log("LENGTH:", process.env.BREVO_API_KEY?.length);
 
 const express    = require('express');
 const multer     = require('multer');
@@ -23,7 +20,7 @@ const PORT = process.env.PORT || 3000;
 const GROQ_API_KEY  = process.env.GROQ_API_KEY;
 const JWT_SECRET    = process.env.JWT_SECRET;
 const BREVO_API_KEY = process.env.BREVO_API_KEY;
-const BREVO_SENDER  = process.env.BREVO_SENDER || 'owly.app.mailer@gmail.com';
+const BREVO_SENDER  = process.env.BREVO_SENDER || 'smbot.app.mailer@gmail.com';
 
 if (!GROQ_API_KEY)  { console.error('❌ GROQ_API_KEY missing!');  process.exit(1); }
 if (!JWT_SECRET)    { console.error('❌ JWT_SECRET missing!');    process.exit(1); }
@@ -34,9 +31,9 @@ const MODEL    = 'llama-3.1-8b-instant';
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'Public')));
+app.use(express.static(path.join(__dirname, 'public')));
 
-// ── Brevo Email (fetch API) ─────────────────────
+// ── Brevo Email ─────────────────────────────────
 console.log('✅ Brevo email service ready!');
 
 async function sendVerificationEmail(toEmail, code) {
@@ -50,12 +47,12 @@ async function sendVerificationEmail(toEmail, code) {
     body: JSON.stringify({
       sender: { name: 'SMbot', email: BREVO_SENDER },
       to: [{ email: toEmail }],
-      subject: 'Your Owly Verification Code',
+      subject: 'Your SMbot Verification Code',
       htmlContent: `
         <div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;padding:32px;background:#f9f9f9;border-radius:12px;">
-          <h2 style="color:#5b4fcf;margin-bottom:8px;">🦉 Welcome to Owly!</h2>
+          <h2 style="color:#059669;margin-bottom:8px;">🤖 Welcome to SMbot!</h2>
           <p style="color:#444;">Use the code below to verify your email address:</p>
-          <div style="font-size:36px;font-weight:bold;letter-spacing:8px;color:#5b4fcf;text-align:center;padding:24px 0;">${code}</div>
+          <div style="font-size:36px;font-weight:bold;letter-spacing:8px;color:#059669;text-align:center;padding:24px 0;">${code}</div>
           <p style="color:#888;font-size:13px;">This code expires in <strong>10 minutes</strong>. Do not share it with anyone.</p>
           <hr style="border:none;border-top:1px solid #ddd;margin:24px 0;">
           <p style="color:#aaa;font-size:12px;text-align:center;">If you didn't request this, just ignore this email.</p>
@@ -70,8 +67,8 @@ async function sendVerificationEmail(toEmail, code) {
 
 // ── SQLite ──────────────────────────────────────
 const DB_PATH = process.env.RENDER_DISK_PATH
-  ? path.join(process.env.RENDER_DISK_PATH, 'owly.db')
-  : path.join(__dirname, 'owly.db');
+  ? path.join(process.env.RENDER_DISK_PATH, 'smbot.db')
+  : path.join(__dirname, 'smbot.db');
 const db = new Database(DB_PATH);
 
 db.exec(`
@@ -115,7 +112,7 @@ db.exec(`
     expires_at INTEGER NOT NULL
   );
 `);
-console.log('✅ Database ready');
+console.log('✅ Database ready:', DB_PATH);
 
 // ── Rate Limiter ────────────────────────────────
 const rateLimitMap = new Map();
@@ -163,7 +160,6 @@ async function validateApiKey() {
 // ═══════════════════════════════════════════════
 
 // ── STEP 1: Register — send verification code ──
-// ✅ CHANGED: now sends real email instead of auto-verifying
 app.post('/api/auth/register', rateLimit(10, 15 * 60 * 1000), async (req, res) => {
   const name     = (req.body.name     || '').trim();
   const email    = (req.body.email    || '').trim().toLowerCase();
@@ -177,36 +173,30 @@ app.post('/api/auth/register', rateLimit(10, 15 * 60 * 1000), async (req, res) =
     return res.status(400).json({ error: 'Invalid email format' });
 
   try {
-    // Check if already a verified user
     const exists = db.prepare('SELECT id, verified FROM users WHERE email = ?').get(email);
     if (exists && exists.verified) return res.status(400).json({ error: 'Email already registered' });
 
     const hashed = await bcrypt.hash(password, 10);
-
-    // Generate 6-digit code
     const code      = String(Math.floor(100000 + Math.random() * 900000));
-    const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
+    const expiresAt = Date.now() + 10 * 60 * 1000;
 
-    // Save pending (upsert)
     db.prepare(`
       INSERT INTO pending_verifications (name, email, password, code, expires_at)
       VALUES (?, ?, ?, ?, ?)
       ON CONFLICT(email) DO UPDATE SET name=excluded.name, password=excluded.password, code=excluded.code, expires_at=excluded.expires_at
     `).run(name, email, hashed, code, expiresAt);
 
-    // Send email
     await sendVerificationEmail(email, code);
     console.log(`✅ Verification code sent to ${email}`);
 
     res.json({ ok: true, message: 'Verification code sent to your email.' });
   } catch(e) {
     console.error('Register error:', e);
-    res.status(500).json({ error: 'Failed to send verification email. Check Gmail config.' });
+    res.status(500).json({ error: 'Failed to send verification email.' });
   }
 });
 
 // ── STEP 2: Verify code ────────────────────────
-// ✅ NEW ENDPOINT
 app.post('/api/auth/verify', rateLimit(10, 15 * 60 * 1000), async (req, res) => {
   const email = (req.body.email || '').trim().toLowerCase();
   const code  = (req.body.code  || '').trim();
@@ -223,12 +213,10 @@ app.post('/api/auth/verify', rateLimit(10, 15 * 60 * 1000), async (req, res) => 
   if (pending.code !== code) return res.status(400).json({ error: 'Incorrect code. Try again.' });
 
   try {
-    // Check again in case someone registered via another path
     const exists = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
     let userId;
 
     if (exists) {
-      // Update existing unverified user
       db.prepare('UPDATE users SET name=?, password=?, verified=1 WHERE email=?')
         .run(pending.name, pending.password, email);
       userId = exists.id;
@@ -239,7 +227,6 @@ app.post('/api/auth/verify', rateLimit(10, 15 * 60 * 1000), async (req, res) => 
       db.prepare('INSERT OR IGNORE INTO stats (user_id) VALUES (?)').run(userId);
     }
 
-    // Clean up pending
     db.prepare('DELETE FROM pending_verifications WHERE email = ?').run(email);
 
     const token = jwt.sign({ id: userId, name: pending.name, email }, JWT_SECRET, { expiresIn: '7d' });
@@ -251,7 +238,6 @@ app.post('/api/auth/verify', rateLimit(10, 15 * 60 * 1000), async (req, res) => 
 });
 
 // ── Resend code ────────────────────────────────
-// ✅ NEW ENDPOINT
 app.post('/api/auth/resend', rateLimit(5, 15 * 60 * 1000), async (req, res) => {
   const email = (req.body.email || '').trim().toLowerCase();
   if (!email) return res.status(400).json({ error: 'Email required' });
@@ -272,7 +258,7 @@ app.post('/api/auth/resend', rateLimit(5, 15 * 60 * 1000), async (req, res) => {
   }
 });
 
-// Login — unchanged
+// ── Login ───────────────────────────────────────
 app.post('/api/auth/login', rateLimit(10, 15 * 60 * 1000), async (req, res) => {
   const email    = (req.body.email    || '').trim().toLowerCase();
   const password =  req.body.password || '';
@@ -288,7 +274,7 @@ app.post('/api/auth/login', rateLimit(10, 15 * 60 * 1000), async (req, res) => {
   } catch(e) { console.error(e); res.status(500).json({ error: 'Login failed' }); }
 });
 
-// Me — unchanged
+// ── Me ──────────────────────────────────────────
 app.get('/api/auth/me', authMiddleware, (req, res) => {
   const user  = db.prepare('SELECT id, name, email, created_at FROM users WHERE id = ?').get(req.user.id);
   const stats = db.prepare('SELECT * FROM stats WHERE user_id = ?').get(req.user.id);
@@ -453,8 +439,8 @@ async function smartAnswer(question, session, level) {
     else explainStyle='Explain clearly for a university student.';
   }
   const systemPrompt = arabicQ
-    ? `أنت مساعد دراسي ذكي اسمك Owly. ${explainStyle}\n- أجب بالعربية فقط\n- إذا كان المحتوى بالإنجليزي ترجمه واشرحه\n- ابدأ مباشرة بدون مقدمات`
-    : `You are Owly, a smart study assistant. ${explainStyle}\n- Answer in the same language as the question\n- Start directly`;
+    ? `أنت مساعد دراسي ذكي اسمك SMbot. ${explainStyle}\n- أجب بالعربية فقط\n- إذا كان المحتوى بالإنجليزي ترجمه واشرحه\n- ابدأ مباشرة بدون مقدمات`
+    : `You are SMbot, a smart study assistant. ${explainStyle}\n- Answer in the same language as the question\n- Start directly`;
   const userMessage = arabicQ
     ? `محتوى المحاضرة:\n"""\n${context}\n"""\n\nسؤال: ${question}\n\nأجب:`
     : `Lecture:\n"""\n${context}\n"""\n\nQuestion: ${question}\n\nAnswer:`;
@@ -609,7 +595,7 @@ app.delete('/api/session/:id', authMiddleware, (req, res) => {
 
 // ── Start ───────────────────────────────────────
 app.listen(PORT, '0.0.0.0', () => {
-  console.log('🦉 Owly v2.1 running on port', PORT);
+  console.log('🤖 SMbot v2.1 running on port', PORT);
   console.log('📦 SQLite DB:', DB_PATH);
 });
 
